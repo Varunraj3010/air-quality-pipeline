@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+import psycopg2
 from db import get_connection, create_table, save
 
 API_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
@@ -26,11 +27,21 @@ def clean(data):
     return df
 
 def main():
-    data = fetch()
+    try:
+        data = fetch()
+    except requests.RequestException as e:
+        print(f"Could not fetch data: {e}")
+        return
+
     df = clean(data)
     print(f"{len(df)} clean rows")
     
-    conn = get_connection()
+    try:
+        conn = get_connection()
+    except psycopg2.OperationalError as e:
+        print(f"Database connection failed: {e}")
+        return
+
     try:
         create_table(conn)
         inserted = save(conn, df)
